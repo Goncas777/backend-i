@@ -24,6 +24,7 @@
 - Inside the Dev Container, open a terminal and run:
 
 ```bash
+    poetry config virtualenvs.in-project true # configures poetry to create virtual environment in the projects root
     poetry new backend-i
     cd backend-i
 ```
@@ -185,3 +186,279 @@ poetry run python store.py
 ### Challenge
 
 - Extend the online store by implementing inheritance with a subclass `DiscountedProduct` (as shown above) and display both the original and discounted prices.
+
+
+## Session 4: Iterators, Generators, Enumerate & Advanced Yield
+
+**Goal**: Learn efficient data traversal using iterators and generators, and enhance your understanding of yield alongside built-in functions like enumerate for practical backend tasks.
+
+**Definition:**
+- Implement custom iterators with __iter__ and __next__.
+- Create generator functions that use yield to produce sequences lazily.
+- Use enumerate to iterate over collections with index-value pairs.
+
+**Documentation References:**
+- [Iterators](https://docs.python.org/3/tutorial/classes.html#iterators)
+- [Generators](https://docs.python.org/3/tutorial/classes.html#generators)
+
+### Tutorial
+
+#### Custom Iterator with Enumerate:
+- Create a file iterators.py:
+```python
+class EvenIterator:
+    def __init__(self, numbers):
+        self.numbers = numbers
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        # Use enumerate-like behaviour to track index and value
+        while self.index < len(self.numbers):
+            num = self.numbers[self.index]
+            self.index += 1
+            if num % 2 == 0:
+                return num
+        raise StopIteration
+
+# Using enumerate to show index-value pairs
+items = ['apple', 'banana', 'cherry']
+for index, item in enumerate(items):
+    print(f"Index {index}: {item}")
+```
+
+- Generator with Detailed Yield Explanation:
+
+In the same file, add:
+```python
+def fibonacci(n):
+    """Yield the Fibonacci sequence up to n terms.
+    
+    'yield' pauses the function saving its state, and produces a value
+    on each iteration. This is memory efficient for large sequences.
+    """
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+# Tutorial snippet: Generate and print first 10 Fibonacci numbers
+for num in fibonacci(10):
+    print("Fibonacci number:", num)
+```
+
+```bash 
+poetry run python iterators.py
+```
+
+### Exercise
+
+- Implement the custom EvenIterator to filter even numbers from a list.
+Write a generator function that yields the Fibonacci sequence.
+
+
+### Challenge
+
+- Create a generator that reads lines from a large text file (simulate with a list of strings), uses enumerate to show line numbers, strips whitespace, and filters out empty lines.
+
+
+## Session 5: Decorators
+
+**Goal:** Learn how to enhance functions using decorators to modify or extend their behaviour without altering their code.
+
+**Definition:**
+Understand the concept of decorators in Python.
+Create simple decorators for logging, execution timing, authentication, and caching.
+
+**Documentation Reference:**
+- [Decorators](https://book.pythontips.com/en/latest/decorators.html)
+
+### Tutorial
+
+- Simple Logging Decorator:
+Create a file named decorators.py:
+```python
+def log_calls(func):
+    """A decorator that logs function call details."""
+    def wrapper(*args, **kwargs):
+        print(f"Calling {func.__name__} with args: {args} kwargs: {kwargs}")
+        result = func(*args, **kwargs)
+        print(f"{func.__name__} returned: {result}")
+        return result
+    return wrapper
+
+@log_calls
+def add(a, b):
+    return a + b
+
+print("Result of add:", add(3, 4))
+```
+
+### Exercise
+
+- Write a decorator that logs the execution time of a function.
+**Hint**: use `time` built-in module
+
+### Challenge
+
+- Create two decorators: one for simulating authentication (verifying a username) and another for caching results of an expensive function (e.g. computing factorial). Demonstrate their usage by decorating a function.
+
+**Hint**: use `functools` built-in module
+
+## Session 6: Unit Testing with pytest
+
+**Goal:** Introduce unit testing in Python using pytest to ensure code quality and reliability.  
+**Definition:**  
+- Understand the importance of testing in software development.  
+- Learn how to write and run unit tests using pytest.  
+- Integrate tests in your Poetry-managed project.  
+
+**Documentation References:**  
+- [pytest Documentation](https://docs.pytest.org/en/stable/)
+
+### Tutorial
+
+1. **Install pytest as a Development Dependency:**  
+```bash
+poetry add --dev pytest
+```
+- Create a Simple Function and Its Test:
+```py
+def add(a, b):
+    return a + b
+```
+- Then create a test file test_sample.py:
+```py
+from sample import add
+
+def test_add():
+    assert add(2, 3) == 5
+    assert add(-1, 1) == 0
+```
+- Run the Tests:
+```bash
+poetry run pytest
+```
+
+### Exercise
+
+- Write a function that multiplies two numbers and create a pytest unit test for it.
+
+### Challenge
+
+- Implement a function to calculate the factorial of a number recursively (handling negative inputs with an exception) and write unit tests covering normal and edge cases.
+
+## Session 7: Command Line Interfaces using Typer
+
+**Goal:** Learn how to build command line interface (CLI) applications in Python using Typer.  
+**Definition:**  
+- Understand how to create commands, arguments, and options using Typer.  
+- Integrate CLI functionality into your Poetry-managed project for easy command execution.
+
+**Documentation References:**  
+- [Typer Documentation](https://typer.tiangolo.com/)
+
+### Tutorial
+
+#### Create a Basic Typer CLI Application:**  
+Create a file `main.py`:
+```python
+import typer
+
+app = typer.Typer()
+
+@app.command()
+def hello(name: str):
+    """
+    Greet the user with their name.
+    """
+    typer.echo(f"Hello {name}")
+
+if __name__ == "__main__":
+    app()
+```
+
+Run the CLI Application:
+Execute the application using Poetry:
+```bash
+poetry run python main.py hello --name "World"
+```
+
+### Exercise
+
+- Develop a Typer CLI command that accepts an integer as input and prints its square.
+
+
+### Challenge
+
+- Extend your CLI to support multiple commands (e.g. addition and subtraction) with proper error handling.
+
+## Session 8: Building a Discord Bot with Typer CLI
+
+**Goal:** Create a hands-on project to build a Discord bot that runs under a Typer-based command line interface.  
+**Definition:**  
+- Learn how to use the Discord API via discord.py to create a bot.  
+- Integrate the bot with a Typer CLI for command-based execution and control.  
+- Manage your project and dependencies with Poetry.
+
+**Documentation References:**  
+- [discord.py Documentation](https://discordpy.readthedocs.io/en/stable/)
+- [Typer Documentation](https://typer.tiangolo.com/)
+
+### Tutorial
+
+1. **Create the Discord Bot Module:**  
+Create a file `bot.py`:
+```python
+import discord
+from discord.ext import commands
+
+bot = commands.Bot(command_prefix="!")
+
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}")
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send("Pong!")
+
+def run_bot(token: str):
+    bot.run(token)
+```
+
+2. Integrate the Bot with Typer CLI:
+Create a file cli.py:
+```py
+import typer
+from bot import run_bot
+
+app = typer.Typer()
+
+@app.command()
+def start(token: str):
+    """
+    Start the Discord bot using the provided token.
+    """
+    run_bot(token)
+
+if __name__ == "__main__":
+    app()
+```
+
+Run the Bot via CLI:
+Execute the bot using Poetry (replace <YOUR_DISCORD_TOKEN> with your actual token):
+```bash 
+poetry run python cli.py start --token "<YOUR_DISCORD_TOKEN>"
+```
+
+### Exercise
+
+- Add a simple function to your bot that returns a welcome message for a user and expose it via a Typer command.
+
+### Challenge
+
+- Extend your project by adding a Typer command that sends a test message to a specific Discord channel. (Hint: Use asynchronous functions in your bot module.)
+
