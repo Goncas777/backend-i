@@ -350,7 +350,74 @@ poetry run pytest
 
 - Implement a function to calculate the factorial of a number recursively (handling negative inputs with an exception) and write unit tests covering normal and edge cases.
 
-## Session 7: Command Line Interfaces using Typer
+## Session 7: Context Managers
+
+**Goal:** Learn to manage resources effectively by implementing context managers and utilising the with statement to ensure clean, safe handling of resources in your code.
+**Definition:**
+- Understand what context managers are and how they facilitate resource management (e.g. file handling, network connections, locks).
+- Learn how to implement context managers using both a class (defining `__enter__` and `__exit__`) and the `@contextmanager` decorator from the `contextlib` module.
+- Integrate these techniques into your Poetry-managed project for consistency.
+**Documentation References:**
+- [Context Managers](https://docs.python.org/3/reference/datamodel.html#context-managers)
+- [contextlib — Utilities for with-statement contexts](https://docs.python.org/3/library/contextlib.html)
+
+### Tutorial
+- Custom Context Manager using a Class:
+- Create a file named context_manager.py with the following code:
+```py
+class FileOpener:
+    def __init__(self, filename, mode):
+        self.filename = filename
+        self.mode = mode
+        self.file = None
+
+    def __enter__(self):
+        print(f"Opening file {self.filename}")
+        self.file = open(self.filename, self.mode)
+        return self.file
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(f"Closing file {self.filename}")
+        if self.file:
+            self.file.close()
+        # Do not suppress exceptions
+        return False
+
+# Usage example:
+if __name__ == "__main__":
+    with FileOpener("example.txt", "w") as f:
+        f.write("Hello, Context Managers!")
+```
+- Context Manager using the @contextmanager Decorator:
+- Extend the same file or create a new one, and add:
+```py
+from contextlib import contextmanager
+
+@contextmanager
+def open_file(filename, mode):
+    print(f"Opening file {filename}")
+    f = open(filename, mode)
+    try:
+        yield f
+    finally:
+        print(f"Closing file {filename}")
+        f.close()
+
+# Usage example:
+if __name__ == "__main__":
+    with open_file("example.txt", "a") as f:
+        f.write("\nAppending with context manager using @contextmanager.")
+```
+
+### Exercise
+
+- Write a context manager that measures and prints the execution time of the code block it wraps.
+
+### Challenge
+
+- Create a context manager using the @contextmanager decorator that handles exceptions within its block, logs the exception details, and suppresses the exception so that the program continues running.
+
+## Session 8: Command Line Interfaces using Typer
 
 **Goal:** Learn how to build command line interface (CLI) applications in Python using Typer.  
 **Definition:**  
@@ -390,12 +457,11 @@ poetry run python main.py hello --name "World"
 
 - Develop a Typer CLI command that accepts an integer as input and prints its square.
 
-
 ### Challenge
 
 - Extend your CLI to support multiple commands (e.g. addition and subtraction) with proper error handling.
 
-## Session 8: Building a Discord Bot with Typer CLI
+## Session 9: Building a Discord Bot with Typer CLI
 
 **Goal:** Create a hands-on project to build a Discord bot that runs under a Typer-based command line interface.  
 **Definition:**  
@@ -461,4 +527,87 @@ poetry run python cli.py start --token "<YOUR_DISCORD_TOKEN>"
 ### Challenge
 
 - Extend your project by adding a Typer command that sends a test message to a specific Discord channel. (Hint: Use asynchronous functions in your bot module.)
+
+## Session 10: HTTP Protocol
+**Goal:** Gain a deep understanding of the HTTP protocol and learn how to implement a basic HTTP server from scratch using Python’s built-in libraries (without any external frameworks).
+**Definition:**
+- Understand the fundamentals of the HTTP protocol including requests, responses, headers, and methods (e.g. GET, POST).
+- Learn how to create a low-level TCP socket server that manually handles HTTP request parsing and response generation.
+- Discover how HTTP messages are structured and how to construct valid HTTP responses.
+**Documentation References:**
+- [Socket Module – Python Documentation](https://docs.python.org/3/library/socket.html)
+- [HTTP/1.1 Overview – MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Overview)
+### Tutorial
+- Understanding the Basics:
+  - HTTP is a request–response protocol that runs over TCP/IP. A client (typically a web browser) sends an HTTP request to a server, which then returns an HTTP response. An HTTP request contains:
+    - A request line (e.g. GET / HTTP/1.1)
+    - Headers (e.g. Host: localhost)
+    - An optional body (for POST or PUT requests)
+
+  - An HTTP response typically contains:
+    - A status line (e.g. HTTP/1.1 200 OK)
+    - Headers (e.g. Content-Type: text/html)
+    - An optional body (e.g. HTML content)
+
+- Creating a Basic HTTP Server Using Sockets:
+- Create a file called http_server.py with the following code:
+```py
+import socket
+
+# Define the host and port to listen on
+HOST, PORT = '127.0.0.1', 8080
+
+# Create a TCP socket
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+    # Allow immediate reuse of address after program exit
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # Bind the socket to the host and port
+    server_socket.bind((HOST, PORT))
+    # Listen for incoming connections
+    server_socket.listen(1)
+    print(f"Serving HTTP on {HOST} port {PORT} ...")
+
+    while True:
+        # Accept a new client connection
+        client_connection, client_address = server_socket.accept()
+        with client_connection:
+            # Receive the request data (limit to 1024 bytes for simplicity)
+            request_data = client_connection.recv(1024).decode('utf-8')
+            print("Received request:")
+            print(request_data)
+
+            # Construct a simple HTTP response
+            http_response = (
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/html; charset=utf-8\r\n"
+                "Content-Length: 46\r\n"
+                "\r\n"
+                "<html><body><h1>Hello, HTTP!</h1></body></html>"
+            )
+
+            # Send the HTTP response back to the client
+            client_connection.sendall(http_response.encode('utf-8'))
+```
+- Explanation of the Code:
+
+  - We create a TCP socket using socket.socket(socket.AF_INET, socket.SOCK_STREAM).
+  - The setsockopt call with SO_REUSEADDR ensures that the socket can be reused quickly after the program stops.
+  - The server listens on IP 127.0.0.1 (localhost) and port 8080.
+  - For each incoming connection, the server reads the request, prints it, and then sends a hard-coded HTTP response.
+  - Notice the HTTP response is manually constructed. The headers and body are separated by a blank line (\r\n\r\n).
+
+- Running the Server:
+
+- To run the server (ensuring your project is managed with Poetry), use:
+```bash
+poetry run python http_server.py
+```
+- Open your browser and navigate to http://127.0.0.1:8080 to see the response.
+
+### Exercise
+- Modify the server to parse the first line of the HTTP request (the request line) and print out the HTTP method and the requested path.
+
+### Challenge
+- Extend your HTTP server to support multiple endpoints. For example, respond with a different message when the requested path is /about versus / (the root). Also, include basic error handling for unsupported paths by returning a 404 response.
+
 
