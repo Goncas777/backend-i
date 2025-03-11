@@ -1,0 +1,2 @@
+Appending with context manager using @contextmanager.
+Appending with context manager using @contextmanager.
