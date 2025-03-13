@@ -426,6 +426,7 @@ if __name__ == "__main__":
 
 **Documentation References:**  
 - [Typer Documentation](https://typer.tiangolo.com/)
+- [Typer Testing](https://typer.tiangolo.com/tutorial/testing)
 
 ### Tutorial
 
@@ -450,7 +451,7 @@ if __name__ == "__main__":
 Run the CLI Application:
 Execute the application using Poetry:
 ```bash
-poetry run python main.py hello --name "World"
+poetry run python main.py hello "World"
 ```
 
 ### Exercise
