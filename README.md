@@ -612,3 +612,719 @@ poetry run python http_server.py
 - Extend your HTTP server to support multiple endpoints. For example, respond with a different message when the requested path is /about versus / (the root). Also, include basic error handling for unsupported paths by returning a 404 response.
 
 
+## Session 11: Developing and Using an API with FastAPI
+
+**Goal:** Learn how to create a RESTful API using FastAPI, integrate logging, and test your endpoints to ensure reliable functionality.
+**Definition:**
+- Understand how FastAPI leverages Python type hints to build efficient APIs quickly.
+- Learn to create various endpoints (GET, POST, etc.) and integrate the built-in Python logging module to monitor API behaviour.
+- Gain knowledge on testing API endpoints using tools such as pytest and HTTP client libraries (e.g. httpx).
+
+**Documentation References:**
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Python Logging Documentation](https://docs.python.org/3/library/logging.html)
+
+### Tutorial
+- Setting Up the FastAPI Application:
+- Create a file named main.py with the following content:
+> Install `poetry add uvicorn` to your dependencies
+```py
+from fastapi import FastAPI, HTTPException
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+
+@app.get("/")
+async def read_root():
+    logger.info("Root endpoint called")
+    return {"message": "Welcome to the FastAPI API!"}
+
+@app.post("/items/")
+async def create_item(item: dict):
+    logger.info(f"Item received: {item}")
+    # A simple validation example
+    if "name" not in item:
+        logger.error("Item does not contain 'name'")
+        raise HTTPException(status_code=400, detail="Item must have a name")
+    return {"item": item}
+
+# Run the application using Uvicorn with:
+# poetry run uvicorn main:app --reload
+```
+- Open your browser or use an HTTP client to access http://127.0.0.1:8000 and http://127.0.0.1:8000/docs for interactive API docs.
+- Testing the API:
+```py
+#Create a test file named test_main.py:
+
+from fastapi.testclient import TestClient
+from main import app
+
+client = TestClient(app)
+
+def test_read_root():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"message": "Welcome to the FastAPI API!"}
+
+def test_create_item_success():
+    response = client.post("/items/", json={"name": "Test Item"})
+    assert response.status_code == 200
+    assert response.json() == {"item": {"name": "Test Item"}}
+
+def test_create_item_failure():
+    response = client.post("/items/", json={"description": "No name provided"})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Item must have a name"
+```
+
+### Exercise
+- Add a new endpoint to update an item using the PUT method. The endpoint should log the update operation and return the updated item.
+
+### Challenge
+- Extend the API by adding a DELETE endpoint to remove an item. The endpoint should:
+    - Log the deletion.
+    - Return a message confirming the deletion.
+    - Include a test case that checks for the correct status code and response.
+
+## Session 12: Deploying FastAPI API with Docker and Logging
+
+**Goal:** Learn how to containerise your FastAPI application using Docker, configure logging within the container, and ensure the API runs reliably in a production-like environment.
+**Definition:**
+- Understand the basics of Docker and how to create a Dockerfile for your FastAPI application.
+- Learn to configure logging so that container logs can be monitored easily.
+- Gain skills to build and run the containerised API, and optionally extend to using Docker Compose for multi-container setups.
+
+**Documentation References:**
+- [Docker Documentation](https://docs.docker.com/reference/)
+- [FastAPI Docker Deployment](https://fastapi.tiangolo.com/deployment/docker/?h=docker)
+
+### Tutorial
+- Creating a Dockerfile:
+- Create a file named Dockerfile in your project directory:
+```dockerfile
+# Use an official Python runtime as a parent image
+FROM python:3.10-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the pyproject.toml and poetry.lock files to install dependencies
+COPY pyproject.toml poetry.lock* /app/
+
+# Install Poetry
+RUN pip install poetry
+
+# Install dependencies without dev dependencies for production
+RUN poetry config virtualenvs.create false && poetry install --no-dev
+
+# Copy the rest of the application code
+COPY . /app/
+
+# Expose the port the app runs on
+EXPOSE 8000
+
+# Command to run the application using Uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+- Building and Running the Docker Container:
+- Build the Docker image:
+
+`docker build -t fastapi-app .`
+
+- Run the container:
+
+`docker run -d -p 8000:8000 fastapi-app`
+
+- Your FastAPI app will now be accessible at http://localhost:8000.
+
+### Exercise
+- Create a Docker Compose file to run your FastAPI application along with a reverse proxy (for example, using Nginx) for routing. Ensure that logs are forwarded appropriately.
+
+### Challenge
+- Enhance your Docker setup by adding a volume mount for persistent logging. Modify your Dockerfile and/or Docker Compose configuration so that application logs are saved to a host directory. Provide instructions to view the logs from the host.
+
+## Session 13: Integrating Docker, FastAPI, SQLModel, and Postgres with Logic Layers
+
+**Goal:**
+- Build a robust RESTful API using FastAPI, SQLModel (an ORM with Pydantic support), and a Postgres database.
+- Leverage Docker Compose to orchestrate containers for the application and database, allowing developers to quickly start using new tools without manual installations.
+- Introduce a logic (business) layer to separate core business rules from API endpoints, enhancing modularity and maintainability.
+
+**Definition:**
+- FastAPI: A modern, fast (high-performance) web framework for building APIs with Python type hints.
+- SQLModel: An ORM library (built on SQLAlchemy) that integrates with Pydantic for data validation and settings management.
+- Postgres: A powerful, open-source object-relational database system.
+- Docker Compose: A tool for defining and running multi-container Docker applications, which accelerates development by allowing you to run a complete stack (FastAPI, Postgres, etc.) without installing them locally.
+- Logic Layers: By decoupling business logic from the API routes, you create reusable and testable components that simplify future development and maintenance.
+
+**Documentation References:**
+-[FastAPI Documentation](https://fastapi.tiangolo.com/)
+-[SQLModel Documentation](https://sqlmodel.tiangolo.com/)
+-[PostgreSQL Documentation](https://www.postgresql.org/docs/)
+-[Docker Compose Documentation](https://docs.docker.com/reference/compose-file/)
+
+### Tutorial
+1. Application Setup with FastAPI and SQLModel
+
+Create a file called main.py:
+```py
+from fastapi import FastAPI, HTTPException, Depends
+from sqlmodel import SQLModel, Field, create_engine, Session, select
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+
+# Define a sample model for an item
+class Item(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    name: str
+    description: str = None
+
+# Database connection string using Postgres container (host 'db' will be defined in docker-compose)
+DATABASE_URL = "postgresql://postgres:password@db:5432/postgres"
+engine = create_engine(DATABASE_URL, echo=True)
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+# ----- Logic Layer (Business Logic) -----
+
+def create_item_logic(session: Session, item: Item) -> Item:
+    logger.info("Creating a new item in the database")
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+def update_item_logic(session: Session, item_id: int, new_item: Item) -> Item:
+    logger.info(f"Updating item with id {item_id}")
+    statement = select(Item).where(Item.id == item_id)
+    existing_item = session.exec(statement).one_or_none()
+    if not existing_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    existing_item.name = new_item.name
+    existing_item.description = new_item.description
+    session.add(existing_item)
+    session.commit()
+    session.refresh(existing_item)
+    return existing_item
+
+def delete_item_logic(session: Session, item_id: int) -> dict:
+    logger.info(f"Deleting item with id {item_id}")
+    statement = select(Item).where(Item.id == item_id)
+    item = session.exec(statement).one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    session.delete(item)
+    session.commit()
+    return {"message": f"Item {item_id} deleted successfully"}
+
+# ----- API Endpoints -----
+
+@app.on_event("startup")
+def on_startup():
+    SQLModel.metadata.create_all(engine)
+    logger.info("Database tables created")
+
+@app.post("/items/", response_model=Item)
+def create_item(item: Item, session: Session = Depends(get_session)):
+    return create_item_logic(session, item)
+
+@app.get("/items/{item_id}", response_model=Item)
+def read_item(item_id: int, session: Session = Depends(get_session)):
+    statement = select(Item).where(Item.id == item_id)
+    result = session.exec(statement)
+    item = result.one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+@app.put("/items/{item_id}", response_model=Item)
+def update_item(item_id: int, item: Item, session: Session = Depends(get_session)):
+    return update_item_logic(session, item_id, item)
+
+@app.delete("/items/{item_id}")
+def delete_item(item_id: int, session: Session = Depends(get_session)):
+    return delete_item_logic(session, item_id)
+```
+2. Docker Setup with Docker Compose
+
+Create a Dockerfile:
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy Poetry configuration files
+COPY pyproject.toml poetry.lock* /app/
+
+# Install Poetry and dependencies
+RUN pip install poetry && poetry config virtualenvs.create false && poetry install --no-dev
+
+# Copy application code
+COPY . /app/
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+Create a docker-compose.yml file:
+```yaml
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+```
+**Explanation:**
+- Docker Compose: This file defines two services: a Postgres database (db) and the FastAPI application (web). Using Docker Compose, developers can start the entire stack with a single command without installing Postgres locally.
+- Logic Layer: In the code, functions like create_item_logic, update_item_logic, and delete_item_logic encapsulate business rules, allowing API endpoints to remain thin and focused on request/response handling. This separation simplifies testing and maintenance.
+
+3. Running the Application
+Build and run the containers using Docker Compose:
+
+`docker-compose up --build`
+
+### Exercise
+- Add a new endpoint to search for items by name. Create a corresponding logic function in the logic layer that queries the database for items matching a provided name substring.
+
+### Challenge
+- Create an endpoint to delete all items that have a specific keyword in their description. Implement the logic in a separate function in the logic layer, include logging for each deletion, and ensure the endpoint returns the number of items deleted.
+
+## Session 14: Django Overview, Setup, and Models/ORM
+
+**Goal:**
+- Introduce Django, a high-level Python web framework that encourages rapid development and clean, pragmatic design.
+- Set up a new Django project and app using Django’s built-in tools.
+- Understand Django’s architecture with a focus on models and the Django ORM for database operations.
+
+**Definition:**
+- Django Overview: Django follows the Model-View-Template (MVT) architectural pattern. It includes a powerful ORM, an easy-to-use admin interface, and a robust set of tools for building web applications quickly.
+- Models and ORM: Models represent the data structure and business logic. The Django ORM allows you to interact with the database using Python code rather than SQL.
+
+**Documentation References:**
+- [Django Documentation](https://docs.djangoproject.com/en/5.1/)
+- [Django Models](https://docs.djangoproject.com/en/5.1/topics/db/models/)
+
+### Tutorial
+- Project Setup:
+    - Create a new Django project and an app:
+```bash
+django-admin startproject mysite
+cd mysite
+python manage.py startapp core
+```
+Configure the App:
+Add the app to INSTALLED_APPS in mysite/settings.py:
+```py
+INSTALLED_APPS = [
+    # ...
+    'core',
+]
+```
+
+Creating a Model:
+In core/models.py, create a simple model:
+
+```py
+from django.db import models
+
+class Product(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return self.name
+```
+Run migrations to create the database schema:
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### Exercise
+- Create a model for a Category with fields for name and slug. Then, create a relationship from Product to Category.
+
+### Challenge
+- Implement a custom model method in the Product model that applies a discount to the product price. Also, write a Django shell snippet to test the method.
+
+## Session 15: Django Views and URL Routing
+
+**Goal:**
+- Learn how to create Django views to handle HTTP requests and responses.
+- Understand URL routing and how to map URLs to views.
+- Create function-based and class-based views for various endpoints.
+
+**Definition:**
+- Views: In Django, views are Python functions or classes that receive web requests and return web responses.
+- URL Routing: Django uses URLconf to map URLs to their corresponding view functions, enabling clean URL designs.
+
+**Documentation References:**
+- [Django Views](https://docs.djangoproject.com/en/5.1/topics/http/views/)
+- [Django URL Dispatcher](https://docs.djangoproject.com/en/5.1/topics/http/urls/)
+
+### Tutorial
+
+- Function-Based View:
+    - In core/views.py, add a simple view:
+```py
+from django.http import HttpResponse
+
+def home(request):
+    return HttpResponse("Welcome to the Django API!")
+
+# URL Routing:
+# Create core/urls.py and configure URL patterns:
+
+from django.urls import path
+from .views import home
+
+urlpatterns = [
+    path('', home, name='home'),
+]
+
+# Then include core/urls.py in the main mysite/urls.py:
+
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('core.urls')),
+]
+
+# Class-Based View:
+# Add a class-based view in core/views.py:
+
+from django.views import View
+from django.http import JsonResponse
+
+class ProductList(View):
+    def get(self, request):
+        # In a real app, retrieve products from the database
+        data = {"products": ["Product 1", "Product 2", "Product 3"]}
+        return JsonResponse(data)
+
+# Update core/urls.py:
+
+    from django.urls import path
+    from .views import home, ProductList
+
+    urlpatterns = [
+        path('', home, name='home'),
+        path('products/', ProductList.as_view(), name='product-list'),
+    ]
+```
+
+### Exercise
+- Create a view that returns a JSON response with details of all categories from the database.
+
+### Challenge
+- Implement a view to update a product using a class-based view. Include error handling for cases when the product is not found.
+
+## Session 16: Django Templates and Forms
+
+**Goal:**
+- Learn how to render dynamic HTML content using Django templates.
+- Understand how to create and process forms in Django to handle user input.
+- Gain insight into form validation and error handling within Django.
+
+**Definition:**
+- Templates: Django’s templating engine allows you to define HTML pages with dynamic content.
+- Forms: Django provides tools for generating HTML forms, validating input, and processing data.
+
+**Documentation References:**
+- [Django Templates](https://docs.djangoproject.com/en/5.1/topics/templates/)
+- [Django Forms](https://docs.djangoproject.com/en/5.1/topics/forms/)
+
+### Tutorial
+- Setting Up a Template:
+- Create a directory core/templates/core/ and add a file home.html:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Django Home</title>
+</head>
+<body>
+    <h1>Welcome to Django!</h1>
+    <p>This is a dynamic page rendered with a template.</p>
+</body>
+</html>
+```
+
+- View to Render Template:
+- In core/views.py, add a view:
+```py
+from django.shortcuts import render
+
+def home_template(request):
+    return render(request, 'core/home.html')
+
+# Update core/urls.py to include:
+
+from django.urls import path
+from .views import home, ProductList, CategoryList, ProductUpdate, home_template
+
+urlpatterns = [
+    path('', home_template, name='home-template'),
+    path('products/', ProductList.as_view(), name='product-list'),
+    path('products/update/<int:product_id>/', ProductUpdate.as_view(), name='product-update'),
+    path('categories/', CategoryList.as_view(), name='category-list'),
+]
+
+#Creating and Processing a Form:
+#Create a simple form in core/forms.py:
+
+from django import forms
+
+class ContactForm(forms.Form):
+    name = forms.CharField(max_length=100)
+    email = forms.EmailField()
+    message = forms.CharField(widget=forms.Textarea)
+
+# Then create a view in core/views.py:
+
+from .forms import ContactForm
+from django.shortcuts import render, redirect
+
+def contact_view(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            # Process form data (e.g., send an email)
+            return redirect('home-template')
+    else:
+        form = ContactForm()
+    return render(request, 'core/contact.html', {'form': form})
+```
+- Create a template core/templates/core/contact.html:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Contact</title>
+</head>
+<body>
+    <h1>Contact Us</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Send</button>
+    </form>
+</body>
+</html>
+```
+- Finally, add a URL for the contact view in core/urls.py:
+```py
+    urlpatterns = [
+        path('', home_template, name='home-template'),
+        path('contact/', contact_view, name='contact'),
+        path('products/', ProductList.as_view(), name='product-list'),
+        path('products/update/<int:product_id>/', ProductUpdate.as_view(), name='product-update'),
+        path('categories/', CategoryList.as_view(), name='category-list'),
+    ]
+```
+
+### Exercise
+- Create a template to display a list of products. Use a view that queries all products from the database and passes them to the template for rendering.
+
+### Challenge
+- Enhance the contact form to include server-side validation that ensures the message field has at least 10 characters. Update the form and display appropriate error messages in the template.
+
+## Session 17: Django Admin and Advanced Features
+
+**Goal:**
+- Learn how to customise the Django admin interface to manage your models efficiently.
+- Explore advanced Django features such as custom admin actions and model methods.
+- Understand how to integrate logging into the admin for monitoring administrative actions.
+
+**Definition:**
+- Django Admin: A built-in interface that allows for quick data management, built automatically from your model definitions.
+- Advanced Features: Customising admin forms, list displays, filters, and adding custom actions to enhance data management capabilities.
+
+**Documentation References:**
+- [Django Admin Site](https://docs.djangoproject.com/en/5.1/ref/contrib/admin/)
+- [Customising the Admin Interface](https://docs.djangoproject.com/en/5.1/ref/contrib/admin/actions/)
+
+### Tutorial
+- Registering Models in Admin:
+- In core/admin.py, register your models:
+```py
+from django.contrib import admin
+from .models import Product, Category
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'category')
+    search_fields = ('name',)
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    prepopulated_fields = {"slug": ("name",)}
+```
+
+- Custom Admin Action:
+- Add a custom action to mark selected products as "discounted" (for demonstration, just log the action):
+```py
+def mark_discounted(modeladmin, request, queryset):
+    for product in queryset:
+        product.price = product.price * 0.9  # apply a 10% discount
+        product.save()
+    modeladmin.message_user(request, "Selected products marked as discounted.")
+mark_discounted.short_description = "Apply 10% discount"
+
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'category')
+    search_fields = ('name',)
+    actions = [mark_discounted]
+
+# Integrating Logging in Admin:
+# In your settings, ensure logging is configured. For example, in mysite/settings.py add:
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+```
+- Accessing the Admin:
+- Create a superuser:
+
+`python manage.py createsuperuser`
+
+### Exercise
+- Customize the Django admin for the Product model to display a computed field (e.g., discounted price) and filter products by category.
+
+### Challenge
+- Implement a custom admin form for the Category model that validates the uniqueness of the slug (beyond the built-in model constraint) and logs an info message when a new category is created via the admin.
+ 
+## Project Module Briefing 
+
+- This final project spans four sessions and challenges you to develop a real-world application using one or more of the following Python solutions: a Command Line Interface (CLI) with Typer, an API with FastAPI, or a SaaS web application with Django. You may even combine frameworks (for instance, using FastAPI for REST endpoints and Typer for background job commands) to solve the problem more effectively. Below are the detailed requirements and evaluation criteria.
+### Project Objectives and Requirements
+
+- Real-World Problem Solving:
+- Your project must address a practical problem. For example:
+    - Personal Finance Manager: Manage income and expenses via a CLI or web interface.
+    - Task Manager: Organise, update, and track tasks using REST APIs and a web dashboard.
+    - Inventory System: Manage products and categories in a business context with full administrative features.
+        
+Choose an idea that is relevant and adds real value to users.
+
+### Framework Implementation Requirements:
+- CLI using Typer:
+    - Commands: Implement at least 5 different commands (e.g. add, list, update, delete, summary).
+        - Options & Arguments: Each command must use options and arguments to handle user input effectively.
+          
+Example: A command to add an expense might require an amount, category, and optional notes.
+
+- API using FastAPI:
+    - Endpoints: Create one endpoint per major HTTP verb—GET, POST, PUT, PATCH, DELETE.
+    - OpenAPI Documentation: Each endpoint must be automatically documented on the OpenAPI (Swagger) page provided by FastAPI.
+            
+Example: A GET endpoint to retrieve tasks, a POST endpoint to create a new task, etc.
+        
+- SaaS using Django:
+    - Models: Create at least 2 models (e.g. Product and Category, or Task and User).
+    - Form: Implement at least 1 form for user input (e.g. a contact or registration form).
+    - Views: Develop at least 4 views (function-based or class-based) to cover listing, detail, creation, and update operations.
+    - Admin: Set up the corresponding admin views to manage your models.
+
+Example: A Django app for inventory could have ListView for products, DetailView for product details, CreateView for adding a new product, and UpdateView for editing existing products.
+
+### Testing:
+- Implement tests using either pytest or unittest. Ensure that critical functionality (e.g. API endpoints, CLI commands, form validations) is covered.
+
+### Logging:
+- Integrate logging into your project to track operations and errors. Ensure that logs capture key actions and any exceptions that occur.
+
+### Database Integration:
+- The project must interact with a database (Postgres is recommended). Ensure that CRUD operations or data queries are performed via your chosen framework’s ORM or database connectivity tool.
+
+### Documentation:
+- Create a comprehensive README.md that describes the project, installation steps, and usage instructions.
+- The documentation should be clear enough so that another developer can set up and run your project without additional guidance.
+
+### Poetry:
+- Use Poetry to manage your dependencies and project configuration consistently.
+
+### Bonus – Docker and Docker Compose:
+- Although not mandatory, using Docker and Docker Compose is a plus. This will allow you to set up your development environment (including Postgres) in a containerised manner without needing to install these tools locally.
+- Include a Dockerfile and a docker-compose.yml file that orchestrates your application and database services.
+
+### Project Evaluation (Maximum 20 Points)
+- Documentation (3 points):
+    - The README.md must clearly describe the project, installation process, and usage instructions.
+- Poetry and Frameworks Requirements (5 points):
+    - Your project must use Poetry for dependency management and meet the specific framework requirements (e.g., 5 CLI commands with options for Typer, endpoints for FastAPI, or models, form, views, and admin for Django).
+- Tests (3 points):
+    - Include a comprehensive test suite covering core functionalities.
+- Logging (2 points):
+    - Implement logging that captures key operations and errors.
+- Database Integration (1 point):
+    - The project must interact with a database (preferably Postgres).
+- GIT Release (Tag) and Copy on Google Drive Module Folder (2 points):
+    - Ensure that you tag a release in your Git repository and provide a copy in the designated Google Drive folder.
+- Docker and Docker Compose (1 point):
+    - Using Docker and Docker Compose to containerise your solution is a plus.
+
+- Working Solution + Multiple Framework Implementation (3 points):
+    - A fully functioning project that may integrate more than one framework (e.g., a FastAPI API combined with Typer background jobs) will score higher.
+
+#### Describing Examples
+
+- Typer Example:
+    - Create a CLI tool where the command expense add --amount 100 --category food --note "Lunch" adds an expense record. Include commands such as list, update, delete, and summary to manage expenses.
+
+- FastAPI Example:
+    - Build a RESTful API with endpoints:
+        - GET /tasks/ to retrieve all tasks.
+        - POST /tasks/ to create a task.
+        - PUT /tasks/{id} to update a task.
+        - PATCH /tasks/{id} for partial updates.
+        - DELETE /tasks/{id} to delete a task.
+    - All endpoints are automatically documented in FastAPI’s interactive docs.
+
+- Django Example:
+    - Develop a SaaS solution, such as an inventory management system, with models for Product and Category, a form for product input, views to list, detail, create, and update products, and an admin interface that allows for managing these models.
