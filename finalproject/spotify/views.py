@@ -1,4 +1,4 @@
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.http import HttpResponseForbidden
 from django.views.generic import ListView, TemplateView, FormView, CreateView
 from django.contrib.auth.forms import UserCreationForm
@@ -44,6 +44,17 @@ def logout_view(request):
     if request.method == "POST":
         logout(request)
         return redirect("/")
+
+
+def upload_arquivo(request):
+    if request.method == 'POST':
+        form = TaskForm(request.POST, request.FILES)  # Importante: request.FILES é necessário para arquivos
+        if form.is_valid():
+            form.save()
+            return redirect('sucesso')  # Redirecionar para uma página de sucesso
+    else:
+        form = TaskForm()
+    return render(request, 'upload.html', {'form': form})
 
 
 # Create your views here.
