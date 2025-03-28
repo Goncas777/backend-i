@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Bem-Sucedido</title>
+</head>
+<body>
+    <h1>Upload Concluído com Sucesso!</h1>
+    <p>Seu arquivo foi enviado com sucesso.</p>
+
+    <!-- Botão para gerar a tabela a partir do arquivo -->
+    <form method="POST" action="{% url 'music_upload:process_file' %}">
+        {% csrf_token %}
+        <button type="submit">Gerar Resumo da Música</button>
+    </form>
+</body>
+</html>

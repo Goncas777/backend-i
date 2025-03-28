@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 # Função que define o caminho do upload
 def user_directory_path(instance, filename):
     # Diretório será 'uploads/user_<id>/nome_do_ficheiro.ext'
-    return f"uploads/user_{instance.user.id}/{filename}"
+    return f"uploads/{filename}"
 
 class UploadedFile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # Associa ao usuário
