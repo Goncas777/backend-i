@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload de Arquivo</title>
+</head>
+<body>
+    <h1>Faça o Upload do seu Arquivo</h1>
+
+    <!-- Formulário de upload -->
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}  <!-- Exibe os campos do formulário como parágrafos -->
+        <button type="submit">Enviar Arquivo</button>
+    </form>
+
+    <!-- Link para a página de sucesso, caso seja redirecionado após o upload -->
+    {% if request.GET.success %}
+        <p>Arquivo enviado com sucesso!</p>
+    {% endif %}
+
+</body>
+</html>
