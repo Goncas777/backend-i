@@ -14,7 +14,9 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .forms import UploadFileForm
 from django.urls import reverse
 
 
@@ -39,20 +41,21 @@ def home_view(request):
     return render(request, "home.html")
 
 
-@login_required  # Garante que o usuário esteja autenticado antes de fazer o upload
+
+
+@login_required
 def upload_file(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
-            # Salvar o arquivo com o usuário autenticado
-            uploaded_file = form.save(commit=False)  # Não salva ainda
-            uploaded_file.user = request.user  # Atribui o usuário autenticado ao arquivo
-            uploaded_file.save()  # Agora salva no banco de dados
-            return redirect('upload_success')  # Redireciona para a página de sucesso
+            uploaded_file = form.save(commit=False)
+            uploaded_file.user = request.user
+            uploaded_file.save()
+            return redirect("upload_success")  # Redireciona para a página de sucesso
     else:
         form = UploadFileForm()
 
-    return render(request, 'upload.html', {'form': form})
+    return render(request, "upload.html", {"form": form})
 
 def process_music_data(request):
     # Obter o usuário logado
@@ -68,9 +71,13 @@ def process_music_data(request):
 
 # Função para formatar a duração em minutos e segundos
 def format_duration(ms):
-    minutes = ms // 60000
-    seconds = (ms % 60000) // 1000
-    return f"{minutes}m {seconds}s"
+    minutes = ms // 60000  # Calcula os minutos
+    seconds = (ms % 60000) // 1000  # Calcula os segundos
+
+    if minutes >= 10:
+        return f"{minutes}m"  # Exibe apenas os minutos, se for superior a 10 minutos
+    else:
+        return f"{minutes}m {seconds}s"  
 
 # Função para descompactar o arquivo ZIP
 def extract_zip(zip_path, extract_to='temp_dir'):
@@ -169,7 +176,7 @@ def upload_file(request):
         if form.is_valid():
             form.save()
             # Redireciona para a página de sucesso após o upload
-            return redirect(reverse('music_upload:upload_success'))
+            return redirect(reverse('upload_success'))
     else:
         form = UploadFileForm()
     return render(request, 'upload.html', {'form': form})
@@ -190,6 +197,19 @@ def process_file(request):
         response = HttpResponse(file.read(), content_type='application/json')
         response['Content-Disposition'] = f'attachment; filename={os.path.basename(summary_file)}'
         return response
+    
+def show_summary(request):
+    summary_file = "summary.json"  # Caminho do arquivo gerado
+
+    # Verifica se o arquivo existe
+    if not os.path.exists(summary_file):
+        return render(request, "error.html", {"message": "O resumo não foi encontrado."})
+
+    # Lê os dados do JSON
+    with open(summary_file, "r", encoding="utf-8") as file:
+        summary_data = json.load(file)
+
+    return render(request, "summary.html", {"summary": summary_data})
 
 
 
