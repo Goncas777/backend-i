@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resumo da Música</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .artist-container {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Resumo das Músicas</h1>
+
+    {% if summary %}
+        {% for artist, data in summary.items %}
+            <div class="artist-container">
+                <h2>{{ artist }}</h2>
+                <p><strong>Tempo Total de Reprodução:</strong> {{ data.total_play_time }}</p>
+
+                <h3>Álbuns</h3>
+                <table>
+                    <tr>
+                        <th>Álbum</th>
+                        <th>Tempo de Reprodução</th>
+                    </tr>
+                    {% for album, time in data.albums.items %}
+                    <tr>
+                        <td>{{ album }}</td>
+                        <td>{{ time }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+
+                <h3>Faixas</h3>
+                <table>
+                    <tr>
+                        <th>Música</th>
+                        <th>Tempo de Reprodução</th>
+                    </tr>
+                    {% for track, time in data.tracks.items %}
+                    <tr>
+                        <td>{{ track }}</td>
+                        <td>{{ time }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Nenhum dado disponível.</p>
+    {% endif %}
+</body>
+</html>

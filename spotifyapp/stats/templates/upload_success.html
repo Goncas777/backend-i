@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Bem-Sucedido</title>
+</head>
+<body>
+    <h1>Upload Concluído com Sucesso!</h1>
+    <p>O seu arquivo foi enviado com sucesso.</p>
+
+    <!-- Botão para gerar a tabela a partir do arquivo -->
+    <form method="POST" action="{% url 'process_file' %}">
+        {% csrf_token %}
+        <button type="submit">Generate Table and see Result</button>
+    </form>
+</body>
+</html>
