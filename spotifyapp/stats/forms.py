@@ -16,7 +16,8 @@ class SignupForm(forms.ModelForm):
         return self.cleaned_data.get("password2")
 
 class UploadFileForm(forms.ModelForm):
-    user = forms.IntegerField(widget=forms.HiddenInput, required=False)
+    user = forms.ModelChoiceField(queryset=User.objects.all(), widget=forms.HiddenInput, required=False)
+
     class Meta:
         model = UploadedFile
         fields = ['file']  # Apenas o campo do ficheiro

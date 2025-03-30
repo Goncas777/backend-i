@@ -4,7 +4,7 @@
 #             ------------------------
 
 migrations:
-	docker compose run --rm web poetry run python manage.py makemigrations
+	poetry run python manage.py makemigrations
 
 create-superuser:
 	docker compose run --rm web poetry run python manage.py createsuperuser
