@@ -7,9 +7,8 @@ RUN pip install poetry
 
 WORKDIR /app
 
+
 COPY pyproject.toml poetry.lock /app/
-COPY spotify /app/spotify/
-COPY manage.py /app/
 
 COPY . .
 
@@ -19,5 +18,7 @@ EXPOSE 8000
 
 RUN poetry run python manage.py collectstatic --noinput
 
-CMD ["sh", "-c", "sleep 5 && poetry run uvicorn spotify.asgi:application --host 0.0.0.0 --port 8000"]
+VOLUME [ "/app" ]
+
+CMD [ "poetry","run","uvicorn","spotify.asgi:application","--host","0.0.0.0","--port","8000" ]
 

@@ -5,6 +5,9 @@
 start:
 	poetry run python manage.py runserver
 
+pytest:
+	docker compose run --rm web poetry run pytest
+
 migrations:
 	poetry run python manage.py makemigrations
 
@@ -19,7 +22,3 @@ compose.migrate:
 
 compose.collectstatic:
 	docker compose exec web poetry run python manage.py collectstatic --noinput
-
-test:
-	make compose.migrate
-	pytest

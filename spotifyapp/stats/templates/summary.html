@@ -48,21 +48,21 @@
     </style>
 </head>
 <body>
-    <h1>Resumo das Músicas</h1>
+    <h1>Spotify Wrapped</h1>
 
-    <a href="{% url 'download_summary' %}" class="download-btn" download="summary.json">Descarregar JSON</a>
+    <a href="{% url 'download_summary' %}" class="download-btn" download="summary.json">Download JSON</a>
 
     {% if summary %}
         {% for artist, data in summary.items %}
             <div class="artist-container">
                 <h2>{{ artist }}</h2>
-                <p><strong>Tempo Total de Reprodução:</strong> {{ data.total_play_time }}</p>
+                <p><strong>Total playtime:</strong> {{ data.total_play_time }}</p>
 
-                <h3>Álbuns</h3>
+                <h3>Albums</h3>
                 <table>
                     <tr>
-                        <th>Álbum</th>
-                        <th>Tempo de Reprodução</th>
+                        <th>Album</th>
+                        <th>Total playtime</th>
                     </tr>
                     {% for album, time in data.albums.items %}
                     <tr>
@@ -72,11 +72,11 @@
                     {% endfor %}
                 </table>
 
-                <h3>Faixas</h3>
+                <h3>Songs</h3>
                 <table>
                     <tr>
-                        <th>Música</th>
-                        <th>Tempo de Reprodução</th>
+                        <th>Track</th>
+                        <th>Total playtime</th>
                     </tr>
                     {% for track, time in data.tracks.items %}
                     <tr>
@@ -88,7 +88,7 @@
             </div>
         {% endfor %}
     {% else %}
-        <p>Nenhum dado disponível.</p>
+        <p>Unavailable data</p>
     {% endif %}
 </body>
 </html>
