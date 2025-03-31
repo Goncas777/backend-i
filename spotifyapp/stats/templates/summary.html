@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resumo da Música</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .artist-container, .global-container {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .download-btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .download-btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spotify Wrapped</h1>
+
+    <a href="{% url 'download_summary' %}" class="download-btn" download="summary.json">Download JSON</a>
+
+    {% if summary %}
+        {% if summary %}
+        <div class="global-container">
+            <h2>Resumo Geral</h2>
+            <p><strong>Total de minutos ouvidos:</strong> {{ summary.global.total_minutes }}</p>
+            <p><strong>Artistas diferentes ouvidos:</strong> {{ summary.global.unique_artists }}</p>
+            <p><strong>Músicas diferentes ouvidas:</strong> {{ summary.global.unique_tracks }}</p>
+            <p><strong>Álbuns diferentes ouvidos:</strong> {{ summary.global.unique_albums }}</p>
+        </div>
+        {% endif %}
+
+        {% for artist, data in summary.artists.items %}
+            {% if artist != "global" %}
+            <div class="artist-container">
+                <h2>{{ artist }}</h2>
+                <p><strong>Total playtime:</strong> {{ data.total_play_time }}</p>
+
+                <h3>Albums</h3>
+                <table>
+                    <tr>
+                        <th>Album</th>
+                        <th>Total playtime</th>
+                    </tr>
+                    {% for album, time in data.albums.items %}
+                    <tr>
+                        <td>{{ album }}</td>
+                        <td>{{ time }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+
+                <h3>Songs</h3>
+                <table>
+                    <tr>
+                        <th>Track</th>
+                        <th>Total playtime</th>
+                    </tr>
+                    {% for track, time in data.tracks.items %}
+                    <tr>
+                        <td>{{ track }}</td>
+                        <td>{{ time }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p>Unavailable data</p>
+    {% endif %}
+</body>
+</html>
