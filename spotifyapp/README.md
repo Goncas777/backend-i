@@ -13,7 +13,7 @@ This project is a web application that analyzes and visualizes your Spotify play
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/spotifyapp.git
+git https://github.com/Goncas777/backend-i/tree/main/spotifyapp.git
 cd spotifyapp
 ```
 
