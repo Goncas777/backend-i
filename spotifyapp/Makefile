@@ -2,6 +2,8 @@
 
 # LINUX Users DO NOT USE DEV CONTAINER
 #             ------------------------
+start:
+	poetry run python manage.py runserver
 
 migrations:
 	poetry run python manage.py makemigrations
@@ -17,3 +19,7 @@ compose.migrate:
 
 compose.collectstatic:
 	docker compose exec web poetry run python manage.py collectstatic --noinput
+
+test:
+	make compose.migrate
+	pytest

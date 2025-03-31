@@ -13,6 +13,9 @@ services:
       - ./media:/app/media
     depends_on:
       - database
+    environment:
+      - DJANGO_SETTINGS_MODULE=spotify.settings
+
   database:
     image: postgres:17-alpine
     ports:

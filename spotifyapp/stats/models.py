@@ -1,42 +1,37 @@
 import os
+import logging
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
-from django.core.exceptions import ObjectDoesNotExist
 
-# Função que define o caminho do upload
+logger = logging.getLogger(__name__)
+
 def user_directory_path(filename):
-    # Diretório será 'uploads/nome_do_ficheiro.ext'
     return f"uploads/{filename}"
-
 
 class UploadedFile(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True)
-    file = models.FileField(upload_to="uploads/")  # Define sempre o mesmo caminho
+    file = models.FileField(upload_to="uploads/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # Se já existir um arquivo ZIP (independente do usuário), apaga o antigo
-        existing_files = UploadedFile.objects.exclude(id=self.id)  # Exclui o atual (caso esteja sendo editado)
+        existing_files = UploadedFile.objects.exclude(id=self.id)
         for obj in existing_files:
             if obj.file.name.endswith('.zip'):
-                default_storage.delete(obj.file.name)  # Apaga o arquivo ZIP anterior
-
-        # Chama o método save do modelo
+                logger.info(f"Deleting old ZIP file: {obj.file.name}")
+                default_storage.delete(obj.file.name)
+        logger.info(f"Saving new file: {self.file.name}")
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.file.name} ({self.user.username if self.user else 'No user'})"
 
-
-    
 class GeneratedJSON(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)  # Relacionado ao utilizador
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     file = models.FileField(upload_to="json_files/")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"JSON de {self.user.username} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
-
+        return f"JSON from {self.user.username} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
 # Create your models here.
